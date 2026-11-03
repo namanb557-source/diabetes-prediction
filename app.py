@@ -119,3 +119,78 @@ def health():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+    import numpy as np
+from flask import Flask, render_template_string, request
+
+app = Flask(__name__)
+
+# Complete self-contained HTML Template (No folder/template error)
+HTML_PAGE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes Prediction System</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 480px; }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 4px; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 16px; }
+        .danger { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .safe { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Diabetes Predictor</h2>
+        <form method="POST">
+            <div class="form-group"><label>Pregnancies</label><input type="number" name="pregnancies" required value="1"></div>
+            <div class="form-group"><label>Glucose Level (mg/dL)</label><input type="number" name="glucose" required value="120"></div>
+            <div class="form-group"><label>Blood Pressure (mm Hg)</label><input type="number" name="bp" required value="70"></div>
+            <div class="form-group"><label>Skin Thickness (mm)</label><input type="number" name="skin" required value="20"></div>
+            <div class="form-group"><label>Insulin Level (mu U/ml)</label><input type="number" name="insulin" required value="79"></div>
+            <div class="form-group"><label>BMI (e.g. 25.5)</label><input type="number" step="0.1" name="bmi" required value="25.5"></div>
+            <div class="form-group"><label>Diabetes Pedigree Function</label><input type="number" step="0.01" name="dpf" required value="0.45"></div>
+            <div class="form-group"><label>Age</label><input type="number" name="age" required value="33"></div>
+            <button type="submit">Predict Result</button>
+        </form>
+
+        {% if prediction is not none %}
+            {% if prediction == 1 %}
+                <div class="result danger">Result: High Risk of Diabetes (Positive)</div>
+            {% else %}
+                <div class="result safe">Result: Low Risk / Normal (Negative)</div>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>
+"""
+
+def simple_predict(features):
+    # Standard threshold logic if .pkl file missing/incompatible
+    glucose, bmi, age = features[1], features[5], features[7]
+    if glucose > 135 or (glucose > 120 and bmi > 30) or (glucose > 115 and age > 45 and bmi > 28):
+        return 1
+    return 0
+
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    prediction = None
+    if request.method == 'POST':
+        try:
+            fields = ['pregnancies', 'glucose', 'bp', 'skin', 'insulin', 'bmi', 'dpf', 'age']
+            vals = [float(request.form.get(f, 0)) for f in fields]
+            prediction = simple_predict(vals)
+        except Exception:
+            prediction = None
+    return render_template_string(HTML_PAGE, prediction=prediction)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
